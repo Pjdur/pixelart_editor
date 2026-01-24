@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sprite Editor</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #222;
+      color: white;
+      font-family: sans-serif;
+    }
+    canvas {
+      border: 4px solid white;
+      image-rendering: pixelated;
+      cursor: crosshair;
+    }
+    .palette {
+      margin-top: 10px;
+    }
+    .color {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      margin: 2px;
+      border: 2px solid white;
+      cursor: pointer;
+    }
+    button {
+      margin-top: 10px;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="sprite" width="256" height="256"></canvas>
+  <div class="palette">
+    <div class="color" style="background:#ff595e"></div>
+    <div class="color" style="background:#ffca3a"></div>
+    <div class="color" style="background:#8ac926"></div>
+    <div class="color" style="background:#1982c4"></div>
+    <div class="color" style="background:#6a4c93"></div>
+    <div class="color" style="background:#000000"></div>
+    <div class="color" style="background:#ffffff"></div>
+  </div>
+  <button id="save">Save PNG</button>
+
+  <script>
+    const canvas = document.getElementById("sprite");
+    const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+
+    const size = 8;
+    const pixelSize = canvas.width / size;
+
+    let currentColor = "#ff595e";
+
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    document.querySelectorAll(".color").forEach(el => {
+      el.addEventListener("click", () => {
+        currentColor = el.style.background;
+      });
+    });
+
+    canvas.addEventListener("click", e => {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / pixelSize);
+      const y = Math.floor((e.clientY - rect.top) / pixelSize);
+      ctx.fillStyle = currentColor;
+      ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+    });
+
+    document.getElementById("save").addEventListener("click", () => {
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = size;
+      tempCanvas.height = size;
+      const tempCtx = tempCanvas.getContext("2d");
+      tempCtx.imageSmoothingEnabled = false;
+      tempCtx.drawImage(canvas, 0, 0, size, size);
+      const link = document.createElement("a");
+      link.download = "sprite.png";
+      link.href = tempCanvas.toDataURL();
+      link.click();
+    });
+  </script>
+</body>
+</html>
