@@ -16,6 +16,7 @@
       border: 4px solid white;
       image-rendering: pixelated;
       cursor: crosshair;
+      margin-top: 10px;
     }
     .palette {
       margin-top: 10px;
@@ -28,7 +29,7 @@
       border: 2px solid white;
       cursor: pointer;
     }
-    button {
+    button, select {
       margin-top: 10px;
       padding: 6px 12px;
       font-size: 14px;
@@ -36,7 +37,22 @@
   </style>
 </head>
 <body>
+  <label for="gridSize">Grid Size:</label>
+  <select id="gridSize">
+    <option value="8">8x8</option>
+    <option value="16">16x16</option>
+    <option value="32">32x32</option>
+  </select>
+
+  <label for="exportSize">Export Size:</label>
+  <select id="exportSize">
+    <option value="64">64px</option>
+    <option value="128" selected>128px</option>
+    <option value="256">256px</option>
+  </select>
+
   <canvas id="sprite" width="256" height="256"></canvas>
+
   <div class="palette">
     <div class="color" style="background:#ff595e"></div>
     <div class="color" style="background:#ffca3a"></div>
@@ -46,6 +62,7 @@
     <div class="color" style="background:#000000"></div>
     <div class="color" style="background:#ffffff"></div>
   </div>
+
   <button id="save">Save PNG</button>
 
   <script>
@@ -53,20 +70,25 @@
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
 
-    const size = 8;
-    const pixelSize = canvas.width / size;
-
+    let size = parseInt(document.getElementById("gridSize").value);
+    let pixelSize = canvas.width / size;
     let currentColor = "#ff595e";
 
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    function clearCanvas() {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
+    clearCanvas();
+
+    // Palette clicks
     document.querySelectorAll(".color").forEach(el => {
       el.addEventListener("click", () => {
         currentColor = el.style.background;
       });
     });
 
+    // Canvas clicks
     canvas.addEventListener("click", e => {
       const rect = canvas.getBoundingClientRect();
       const x = Math.floor((e.clientX - rect.left) / pixelSize);
@@ -75,15 +97,24 @@
       ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
     });
 
+    // Grid size change
+    document.getElementById("gridSize").addEventListener("change", e => {
+      size = parseInt(e.target.value);
+      pixelSize = canvas.width / size;
+      clearCanvas();
+    });
+
+    // Save PNG with chosen export size
     document.getElementById("save").addEventListener("click", () => {
+      const exportSize = parseInt(document.getElementById("exportSize").value);
       const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = size;
-      tempCanvas.height = size;
+      tempCanvas.width = exportSize;
+      tempCanvas.height = exportSize;
       const tempCtx = tempCanvas.getContext("2d");
       tempCtx.imageSmoothingEnabled = false;
-      tempCtx.drawImage(canvas, 0, 0, size, size);
+      tempCtx.drawImage(canvas, 0, 0, exportSize, exportSize);
       const link = document.createElement("a");
-      link.download = "sprite.png";
+      link.download = `sprite_${size}x${size}_${exportSize}px.png`;
       link.href = tempCanvas.toDataURL();
       link.click();
     });
