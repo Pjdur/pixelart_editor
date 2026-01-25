@@ -34,6 +34,11 @@
       padding: 6px 12px;
       font-size: 14px;
     }
+    .button-row {
+      display: flex;
+      gap: 10px; /* space between buttons */
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -63,6 +68,10 @@
     <div class="color" style="background:#ffffff"></div>
   </div>
 
+  <div class="button-row">
+    <button id="undo">Undo</button>
+    <button id="redo">Redo</button>
+  </div>
   <button id="save">Save PNG</button>
 
   <script>
@@ -74,6 +83,9 @@
     let pixelSize = canvas.width / size;
     let currentColor = "#ff595e";
     let isDrawing = false;
+
+    let undoStack = [];
+    let redoStack = [];
 
     function clearCanvas() {
       ctx.fillStyle = "#000";
@@ -89,8 +101,25 @@
       });
     });
 
+    // Save current state
+    function saveState() {
+      undoStack.push(canvas.toDataURL());
+      redoStack = []; // clear redo stack on new action
+    }
+
+    // Restore a state
+    function restoreState(state) {
+      const img = new Image();
+      img.src = state;
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+      };
+    }
+
     // Helper function to paint a pixel
     function drawPixel(e) {
+      saveState();
       const rect = canvas.getBoundingClientRect();
       const x = Math.floor((e.clientX - rect.left) / pixelSize);
       const y = Math.floor((e.clientY - rect.top) / pixelSize);
@@ -123,6 +152,26 @@
       size = parseInt(e.target.value);
       pixelSize = canvas.width / size;
       clearCanvas();
+      undoStack = [];
+      redoStack = [];
+    });
+
+    // Undo button
+    document.getElementById("undo").addEventListener("click", () => {
+      if (undoStack.length > 0) {
+        const state = undoStack.pop();
+        redoStack.push(canvas.toDataURL());
+        restoreState(state);
+      }
+    });
+
+    // Redo button
+    document.getElementById("redo").addEventListener("click", () => {
+      if (redoStack.length > 0) {
+        const state = redoStack.pop();
+        undoStack.push(canvas.toDataURL());
+        restoreState(state);
+      }
     });
 
     // Save PNG with chosen export size
