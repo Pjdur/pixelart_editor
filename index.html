@@ -1,193 +1,250 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Sprite Editor</title>
-  <style>
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: #222;
-      color: white;
-      font-family: sans-serif;
-    }
-    canvas {
-      border: 4px solid white;
-      image-rendering: pixelated;
-      cursor: crosshair;
-      margin-top: 10px;
-    }
-    .palette {
-      margin-top: 10px;
-    }
-    .color {
-      display: inline-block;
-      width: 24px;
-      height: 24px;
-      margin: 2px;
-      border: 2px solid white;
-      cursor: pointer;
-    }
-    button, select {
-      margin-top: 10px;
-      padding: 6px 12px;
-      font-size: 14px;
-    }
-    .button-row {
-      display: flex;
-      gap: 10px; /* space between buttons */
-      margin-top: 10px;
-    }
-  </style>
-</head>
-<body>
-  <label for="gridSize">Grid Size:</label>
-  <select id="gridSize">
-    <option value="8">8x8</option>
-    <option value="16">16x16</option>
-    <option value="32">32x32</option>
-  </select>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Sprite Editor</title>
+        <style>
+            body {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                background: #222;
+                color: white;
+                font-family: sans-serif;
+            }
+            canvas {
+                border: 4px solid white;
+                image-rendering: pixelated;
+                cursor: crosshair;
+                margin-top: 10px;
+            }
+            .palette {
+                margin-top: 10px;
+            }
+            .color {
+                display: inline-block;
+                width: 24px;
+                height: 24px;
+                margin: 2px;
+                border: 2px solid white;
+                cursor: pointer;
+            }
+            button,
+            select {
+                margin-top: 10px;
+                padding: 6px 12px;
+                font-size: 14px;
+            }
+            .button-row {
+                display: flex;
+                gap: 10px; /* space between buttons */
+                margin-top: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <label for="gridSize">Grid Size:</label>
+        <select id="gridSize">
+            <option value="8">8x8</option>
+            <option value="16">16x16</option>
+            <option value="32">32x32</option>
+        </select>
 
-  <label for="exportSize">Export Size:</label>
-  <select id="exportSize">
-    <option value="64">64px</option>
-    <option value="128" selected>128px</option>
-    <option value="256">256px</option>
-  </select>
+        <label for="exportSize">Export Size:</label>
+        <select id="exportSize">
+            <option value="64">64px</option>
+            <option value="128" selected>128px</option>
+            <option value="256">256px</option>
+        </select>
 
-  <canvas id="sprite" width="256" height="256"></canvas>
+        <div style="position: relative">
+            <canvas id="sprite" width="256" height="256"></canvas>
+            <canvas
+                id="grid"
+                width="256"
+                height="256"
+                style="
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    pointer-events: none;
+                "
+            >
+            </canvas>
+        </div>
 
-  <div class="palette">
-    <div class="color" style="background:#ff595e"></div>
-    <div class="color" style="background:#ffca3a"></div>
-    <div class="color" style="background:#8ac926"></div>
-    <div class="color" style="background:#1982c4"></div>
-    <div class="color" style="background:#6a4c93"></div>
-    <div class="color" style="background:#000000"></div>
-    <div class="color" style="background:#ffffff"></div>
-  </div>
+        <div class="palette">
+            <div class="color" style="background: #ff595e"></div>
+            <div class="color" style="background: #ffca3a"></div>
+            <div class="color" style="background: #8ac926"></div>
+            <div class="color" style="background: #1982c4"></div>
+            <div class="color" style="background: #6a4c93"></div>
+            <div class="color" style="background: #000000"></div>
+            <div class="color" style="background: #ffffff"></div>
+        </div>
 
-  <div class="button-row">
-    <button id="undo">Undo</button>
-    <button id="redo">Redo</button>
-  </div>
-  <button id="save">Save PNG</button>
+        <div class="button-row">
+            <button id="undo">Undo</button>
+            <button id="redo">Redo</button>
+        </div>
+        <button id="save">Save PNG</button>
 
-  <script>
-    const canvas = document.getElementById("sprite");
-    const ctx = canvas.getContext("2d");
-    ctx.imageSmoothingEnabled = false;
+        <script>
+            const canvas = document.getElementById("sprite");
+            const ctx = canvas.getContext("2d");
 
-    let size = parseInt(document.getElementById("gridSize").value);
-    let pixelSize = canvas.width / size;
-    let currentColor = "#ff595e";
-    let isDrawing = false;
+            const gridCanvas = document.getElementById("grid");
+            const gridCtx = gridCanvas.getContext("2d");
 
-    let undoStack = [];
-    let redoStack = [];
+            ctx.imageSmoothingEnabled = false;
+            gridCtx.imageSmoothingEnabled = false;
 
-    function clearCanvas() {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+            let size = parseInt(document.getElementById("gridSize").value);
+            let pixelSize = canvas.width / size;
+            let currentColor = "#ff595e";
+            let isDrawing = false;
 
-    clearCanvas();
+            let undoStack = [];
+            let redoStack = [];
 
-    // Palette clicks
-    document.querySelectorAll(".color").forEach(el => {
-      el.addEventListener("click", () => {
-        currentColor = el.style.background;
-      });
-    });
+            function clearCanvas() {
+                ctx.fillStyle = "#000";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
 
-    // Save current state
-    function saveState() {
-      undoStack.push(canvas.toDataURL());
-      redoStack = []; // clear redo stack on new action
-    }
+            clearCanvas();
 
-    // Restore a state
-    function restoreState(state) {
-      const img = new Image();
-      img.src = state;
-      img.onload = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-      };
-    }
+            function drawGrid() {
+                gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
 
-    // Helper function to paint a pixel
-    function drawPixel(e) {
-      saveState();
-      const rect = canvas.getBoundingClientRect();
-      const x = Math.floor((e.clientX - rect.left) / pixelSize);
-      const y = Math.floor((e.clientY - rect.top) / pixelSize);
-      ctx.fillStyle = currentColor;
-      ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
-    }
+                gridCtx.strokeStyle = "rgba(255,255,255,0.15)";
+                gridCtx.lineWidth = 1;
 
-    // Mouse events for click-and-drag drawing
-    canvas.addEventListener("mousedown", e => {
-      isDrawing = true;
-      drawPixel(e);
-    });
+                for (let i = 0; i <= size; i++) {
+                    const p = i * pixelSize;
 
-    canvas.addEventListener("mouseup", () => {
-      isDrawing = false;
-    });
+                    gridCtx.beginPath();
+                    gridCtx.moveTo(p, 0);
+                    gridCtx.lineTo(p, gridCanvas.height);
+                    gridCtx.stroke();
 
-    canvas.addEventListener("mouseleave", () => {
-      isDrawing = false;
-    });
+                    gridCtx.beginPath();
+                    gridCtx.moveTo(0, p);
+                    gridCtx.lineTo(gridCanvas.width, p);
+                    gridCtx.stroke();
+                }
+            }
 
-    canvas.addEventListener("mousemove", e => {
-      if (isDrawing) {
-        drawPixel(e);
-      }
-    });
+            // Palette clicks
+            document.querySelectorAll(".color").forEach((el) => {
+                el.addEventListener("click", () => {
+                    currentColor = el.style.background;
+                });
+            });
 
-    // Grid size change
-    document.getElementById("gridSize").addEventListener("change", e => {
-      size = parseInt(e.target.value);
-      pixelSize = canvas.width / size;
-      clearCanvas();
-      undoStack = [];
-      redoStack = [];
-    });
+            // Save current state
+            function saveState() {
+                undoStack.push(canvas.toDataURL());
+                redoStack = []; // clear redo stack on new action
+            }
 
-    // Undo button
-    document.getElementById("undo").addEventListener("click", () => {
-      if (undoStack.length > 0) {
-        const state = undoStack.pop();
-        redoStack.push(canvas.toDataURL());
-        restoreState(state);
-      }
-    });
+            // Restore a state
+            function restoreState(state) {
+                const img = new Image();
+                img.src = state;
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    drawGrid();
+                };
+            }
 
-    // Redo button
-    document.getElementById("redo").addEventListener("click", () => {
-      if (redoStack.length > 0) {
-        const state = redoStack.pop();
-        undoStack.push(canvas.toDataURL());
-        restoreState(state);
-      }
-    });
+            // Helper function to paint a pixel
+            function drawPixel(e) {
+                saveState();
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / pixelSize);
+                const y = Math.floor((e.clientY - rect.top) / pixelSize);
 
-    // Save PNG with chosen export size
-    document.getElementById("save").addEventListener("click", () => {
-      const exportSize = parseInt(document.getElementById("exportSize").value);
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = exportSize;
-      tempCanvas.height = exportSize;
-      const tempCtx = tempCanvas.getContext("2d");
-      tempCtx.imageSmoothingEnabled = false;
-      tempCtx.drawImage(canvas, 0, 0, exportSize, exportSize);
-      const link = document.createElement("a");
-      link.download = `sprite_${size}x${size}_${exportSize}px.png`;
-      link.href = tempCanvas.toDataURL();
-      link.click();
-    });
-  </script>
-</body>
+                ctx.fillStyle = currentColor;
+                ctx.fillRect(
+                    x * pixelSize,
+                    y * pixelSize,
+                    pixelSize,
+                    pixelSize,
+                );
+
+                drawGrid();
+            }
+
+            // Mouse events for click-and-drag drawing
+            canvas.addEventListener("mousedown", (e) => {
+                isDrawing = true;
+                drawPixel(e);
+            });
+
+            canvas.addEventListener("mouseup", () => {
+                isDrawing = false;
+            });
+
+            canvas.addEventListener("mouseleave", () => {
+                isDrawing = false;
+            });
+
+            canvas.addEventListener("mousemove", (e) => {
+                if (isDrawing) {
+                    drawPixel(e);
+                }
+            });
+
+            // Grid size change
+            document
+                .getElementById("gridSize")
+                .addEventListener("change", (e) => {
+                    size = parseInt(e.target.value);
+                    pixelSize = canvas.width / size;
+
+                    clearCanvas();
+                    drawGrid();
+
+                    undoStack = [];
+                    redoStack = [];
+                });
+
+            // Undo button
+            document.getElementById("undo").addEventListener("click", () => {
+                if (undoStack.length > 0) {
+                    const state = undoStack.pop();
+                    redoStack.push(canvas.toDataURL());
+                    restoreState(state);
+                }
+            });
+
+            // Redo button
+            document.getElementById("redo").addEventListener("click", () => {
+                if (redoStack.length > 0) {
+                    const state = redoStack.pop();
+                    undoStack.push(canvas.toDataURL());
+                    restoreState(state);
+                }
+            });
+
+            // Save PNG with chosen export size
+            document.getElementById("save").addEventListener("click", () => {
+                const exportSize = parseInt(
+                    document.getElementById("exportSize").value,
+                );
+                const tempCanvas = document.createElement("canvas");
+                tempCanvas.width = exportSize;
+                tempCanvas.height = exportSize;
+                const tempCtx = tempCanvas.getContext("2d");
+                tempCtx.imageSmoothingEnabled = false;
+                tempCtx.drawImage(canvas, 0, 0, exportSize, exportSize);
+                const link = document.createElement("a");
+                link.download = `sprite_${size}x${size}_${exportSize}px.png`;
+                link.href = tempCanvas.toDataURL();
+                link.click();
+            });
+        </script>
+    </body>
 </html>
