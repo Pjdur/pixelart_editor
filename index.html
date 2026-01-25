@@ -73,6 +73,7 @@
     let size = parseInt(document.getElementById("gridSize").value);
     let pixelSize = canvas.width / size;
     let currentColor = "#ff595e";
+    let isDrawing = false;
 
     function clearCanvas() {
       ctx.fillStyle = "#000";
@@ -88,13 +89,33 @@
       });
     });
 
-    // Canvas clicks
-    canvas.addEventListener("click", e => {
+    // Helper function to paint a pixel
+    function drawPixel(e) {
       const rect = canvas.getBoundingClientRect();
       const x = Math.floor((e.clientX - rect.left) / pixelSize);
       const y = Math.floor((e.clientY - rect.top) / pixelSize);
       ctx.fillStyle = currentColor;
       ctx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+    }
+
+    // Mouse events for click-and-drag drawing
+    canvas.addEventListener("mousedown", e => {
+      isDrawing = true;
+      drawPixel(e);
+    });
+
+    canvas.addEventListener("mouseup", () => {
+      isDrawing = false;
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      isDrawing = false;
+    });
+
+    canvas.addEventListener("mousemove", e => {
+      if (isDrawing) {
+        drawPixel(e);
+      }
     });
 
     // Grid size change
